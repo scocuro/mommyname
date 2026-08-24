@@ -6,6 +6,7 @@
   <title>엄마 내 이름</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gaegu:wght@700&display=swap" />
   <style>
     :root {
       --bg: #f5f7fb;
@@ -1097,6 +1098,59 @@
     .merge-actions .bottom-btn { min-height: 52px; font-size: 14.5px; border-radius: 16px; }
     .dup-note { font-size: 11.5px; font-weight: 800; color: var(--green-deep); text-align: center; }
 
+    /* ===================== v11 : icon buttons, hint, compare CTA ===================== */
+    .hero-menu-btn {
+      background: transparent !important; box-shadow: none !important;
+      border: 0 !important; border-radius: 0 !important; padding: 0;
+      width: 34px; height: 34px; right: -4px; gap: 5px;
+    }
+    .hero-menu-btn span {
+      width: 22px; height: 2.6px; background: #fff;
+      box-shadow: 0 1px 2px rgba(120,88,0,.25);
+    }
+
+    .saved-mini-btn {
+      background: transparent !important; box-shadow: none !important;
+      border: 0 !important; border-radius: 0 !important; padding: 0;
+      width: 40px; height: 40px;
+      flex-direction: column; gap: 5px;
+    }
+    .saved-mini-btn .ico { display: none; }
+    .saved-mini-btn i.bar {
+      display: block; width: 22px; height: 2.6px; border-radius: 2px; background: #fff;
+      box-shadow: 0 1px 2px rgba(120,88,0,.25);
+    }
+
+    .check-hint {
+      position: absolute; right: 2px; top: calc(50% + 20px);
+      font-family: 'Nanum Pen Script', 'Gaegu', cursive;
+      font-size: 17px; font-weight: 400; line-height: 1;
+      color: var(--green-deep); white-space: nowrap; pointer-events: none;
+      transform: rotate(-2deg); opacity: .92;
+    }
+    body[data-stage="round2Intro"] .check-hint, body[data-stage="round2"] .check-hint,
+    body[data-stage="round3Intro"] .check-hint, body[data-stage="round3"] .check-hint,
+    body[data-stage="round4Intro"] .check-hint, body[data-stage="round4"] .check-hint,
+    body[data-stage="final"] .check-hint { display: none !important; }
+
+    /* 비교하기 유도 버튼 */
+    #compareRound1Btn {
+      min-height: 104px; border-radius: 20px;
+      background: linear-gradient(135deg, #F0674F 0%, #D8395F 100%);
+      color: #FFF6E9; font-size: 16px; font-weight: 900; letter-spacing: -.03em;
+      box-shadow: 0 10px 22px rgba(198,50,74,.30);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+      animation: ctaPulse 2.6s ease-in-out infinite;
+    }
+    #compareRound1Btn small {
+      font-size: 11.5px; font-weight: 700; color: rgba(255,246,233,.85); letter-spacing: -.02em;
+    }
+    @keyframes ctaPulse {
+      0%, 100% { box-shadow: 0 10px 22px rgba(198,50,74,.30); }
+      50% { box-shadow: 0 10px 30px rgba(198,50,74,.48); }
+    }
+    @media (prefers-reduced-motion: reduce) { #compareRound1Btn { animation: none; } }
+
   </style>
 </head>
 <body>
@@ -1118,12 +1172,13 @@
       </div>
     </div>
     <div class="toggle-wrap">
-      <button class="pill green saved-mini-btn" id="savedOpenBtn" aria-label="보관함"><i class="ico ico-list"></i></button>
+      <button class="pill green saved-mini-btn" id="savedOpenBtn" aria-label="보관함"><i class="bar"></i><i class="bar"></i><i class="bar"></i></button>
       <button class="toggle-btn" id="drawerToggleBtn" aria-label="현황"><span class="arrow"></span></button>
       <label class="check-wrap">
         <input type="checkbox" id="similarModeCheck" />
         유사사례 같이보기
       </label>
+      <div class="check-hint" id="checkHint">(시간 단축 가능)</div>
     </div>
   </div>
 
@@ -1426,7 +1481,7 @@
     similarModeCheck.addEventListener('change', () => {
       app.similarMode = (app.selectionMode === 'hundred' || app.selectionMode === 'lineage') ? false : similarModeCheck.checked;
       similarModeCheck.checked = app.similarMode;
-      document.querySelector('.check-wrap').style.display = (app.selectionMode === 'hundred' || app.selectionMode === 'lineage') ? 'none' : '';
+      setSimilarUiVisible(!(app.selectionMode === 'hundred' || app.selectionMode === 'lineage'));
     });
 
     document.getElementById('hundredModeBtn').addEventListener('click', () => {
@@ -1612,6 +1667,12 @@
 
     const NAME_SET = new Set(CANDIDATES.map(c => c.name));
 
+    function setSimilarUiVisible(show) {
+      document.querySelector('.check-wrap').style.display = show ? '' : 'none';
+      const hint = document.getElementById('checkHint');
+      if (hint) hint.style.display = show ? '' : 'none';
+    }
+
     function ensureUnique(arr) {
       return Array.from(new Set(arr));
     }
@@ -1747,7 +1808,7 @@
       setupOverlay.classList.remove('show');
       lineagePage.classList.remove('show');
       drawer.classList.remove('open');
-      document.querySelector('.check-wrap').style.display = '';
+      setSimilarUiVisible(true);
       startPage.classList.remove('hidden');
       render();
     }
@@ -1779,7 +1840,7 @@
       app.surname = surname;
       app.similarMode = (app.selectionMode === 'hundred' || app.selectionMode === 'lineage') ? false : similarModeCheck.checked;
       similarModeCheck.checked = app.similarMode;
-      document.querySelector('.check-wrap').style.display = (app.selectionMode === 'hundred' || app.selectionMode === 'lineage') ? 'none' : '';
+      setSimilarUiVisible(!(app.selectionMode === 'hundred' || app.selectionMode === 'lineage'));
 
       const allow = allowedGenders();
       let source = app.selectionMode === 'hundred' ? TOP_100[app.genderChoice] : CANDIDATES;
@@ -2144,7 +2205,7 @@
       setupOverlay.classList.remove('show');
       lineagePage.classList.remove('show');
       startPage.classList.toggle('hidden', app.started);
-      document.querySelector('.check-wrap').style.display = (app.selectionMode === 'hundred' || app.selectionMode === 'lineage') ? 'none' : '';
+      setSimilarUiVisible(!(app.selectionMode === 'hundred' || app.selectionMode === 'lineage'));
       guideOverlay.classList.remove('show');
       closeSavedOverlay();
       closeCompareOverlay();
@@ -2733,7 +2794,7 @@
             <button class="bottom-btn primary intro-primary-btn" id="introStartBtn">계속</button>
             ${canCompare ? `
               <div class="intro-secondary-actions">
-                <button class="bottom-btn green" id="compareRound1Btn">남편/아내와 비교하기</button>
+                <button class="bottom-btn" id="compareRound1Btn">남편/아내와 비교하기<small>둘 다 고른 이름만 남기면 훨씬 빨라져요</small></button>
               </div>
             ` : ''}
           </div>
