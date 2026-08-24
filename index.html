@@ -600,7 +600,7 @@
     .pick-card { min-height: 140px; }
     body[data-stage="round2"] .pick-card { min-height: 66px; }
 
-    #setupOverlay { z-index: 80; }
+    #setupOverlay, #startMenuOverlay { z-index: 80; }
     .start-page { position: fixed; inset: 0; z-index: 70; background: linear-gradient(155deg,#fff7ed 0%,#f5f7fb 48%,#eff6ff 100%); overflow-y: auto; padding: 28px 18px; display: flex; justify-content: center; align-items: center; }
     .start-page.hidden { display: none; }
     .start-card { width: min(520px,100%); background: rgba(255,255,255,.96); border-radius: 30px; box-shadow: var(--shadow); padding: 28px 22px; }
@@ -1054,6 +1054,49 @@
     }
     body[data-stage="round1"] .always-undo { bottom: 136px; }
 
+    /* ===================== v10 : merge / resume / back guard ===================== */
+    .hero-brand { position: relative; }
+    .hero-menu-btn {
+      position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      box-shadow: 0 4px 10px rgba(18,60,44,.14);
+    }
+    .hero-menu-btn span { display: block; width: 17px; height: 2.4px; border-radius: 2px; background: var(--green-deep); }
+
+    .merge-page {
+      position: fixed; inset: 0; z-index: 72; background: var(--yellow);
+      display: none; flex-direction: column; gap: 10px;
+      padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+    }
+    .merge-page.show { display: flex; }
+    .merge-head { flex: 0 0 auto; background: #fff; border-radius: 20px; padding: 14px 16px; box-shadow: var(--shadow); }
+    .merge-head .modal-title { font-size: 18px; }
+    .merge-head .modal-desc { margin-top: 4px; font-size: 12.5px; }
+    .merge-box {
+      flex: 1 1 0; min-height: 0; background: #fff; border-radius: 20px; padding: 12px;
+      display: flex; flex-direction: column; box-shadow: var(--shadow);
+    }
+    .merge-box-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 8px; flex: 0 0 auto;
+    }
+    .merge-box-head b { font-size: 13px; font-weight: 900; color: var(--green-deep); }
+    .merge-list {
+      flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; align-content: start;
+    }
+    .merge-list .empty { grid-column: 1 / -1; }
+    .name-chip {
+      background: #F7FAF8; border: 1.5px solid var(--line); border-radius: 12px;
+      padding: 9px 6px; font-size: 14.5px; font-weight: 800; text-align: center;
+      word-break: keep-all; color: var(--ink);
+    }
+    .name-chip.dup { background: var(--yellow-tint); border-color: var(--yellow-deep); color: var(--green); font-weight: 900; }
+    .merge-actions { flex: 0 0 auto; display: grid; gap: 8px; }
+    .merge-actions .bottom-btn { min-height: 52px; font-size: 14.5px; border-radius: 16px; }
+    .dup-note { font-size: 11.5px; font-weight: 800; color: var(--green-deep); text-align: center; }
+
   </style>
 </head>
 <body>
@@ -1113,7 +1156,7 @@
 
   <section class="start-page" id="startPage">
     <div class="hero">
-      <div class="hero-brand"><i class="ico ico-tag"></i>엄마내이름</div>
+      <div class="hero-brand"><i class="ico ico-tag"></i>엄마내이름<button class="hero-menu-btn" id="startMenuBtn" aria-label="메뉴"><span></span><span></span><span></span></button></div>
       <div class="hero-inner">
         <div class="hero-form">
           <label class="hero-label" for="surnameInput">엄마! 내 성씨는요</label>
@@ -1160,6 +1203,39 @@
 
   <section class="lineage-page" id="lineagePage"><div class="lineage-card"><button class="back-link" id="lineageBackBtn">← 시작 페이지로</button><div class="modal-title">돌림자 설정</div><div class="modal-desc">돌림자와 들어갈 위치를 선택하면 조건에 맞는 이름만 보여드려요.</div><div class="field" style="margin-top:20px"><label for="lineageInput">돌림자</label><input id="lineageInput" maxlength="1" placeholder="예: 현" /></div><div class="position-row" style="margin-top:12px"><button class="gender-btn active" data-position="middle">중간</button><button class="gender-btn" data-position="end">끝</button><button class="gender-btn" data-position="any">상관없음</button></div><div class="name-preview"><div class="name-box" id="surnameBox">강</div><div class="name-box" id="middleBox"></div><div class="name-box" id="endBox"></div></div><button class="bottom-btn primary" id="lineageStartBtn">이대로 해볼게요!</button></div></section>
 
+  <div class="overlay" id="startMenuOverlay">
+    <div class="setup-modal">
+      <div class="modal-head">
+        <div class="modal-title">저장한 이름으로 시작하기</div>
+        <div class="modal-desc">전에 내보낸 이름 파일이 있으면 그 이름들로 이어서 진행할 수 있어요.</div>
+      </div>
+      <div class="modal-body" style="display:grid;gap:9px">
+        <button class="bottom-btn primary" id="resumeOneBtn">내 이름 파일로 이어하기</button>
+        <button class="bottom-btn green" id="mergeTwoBtn">둘이 고른 이름 합치기</button>
+        <button class="bottom-btn gray" id="closeStartMenuBtn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="merge-page" id="mergePage">
+    <div class="merge-head">
+      <button class="back-link" id="mergeBackBtn">← 뒤로</button>
+      <div class="modal-title" id="mergeTitle">남편/아내와 비교하기</div>
+      <div class="modal-desc" id="mergeSub">서로 고른 이름을 불러와 겹치는 이름을 확인해요.</div>
+    </div>
+    <div class="merge-box">
+      <div class="merge-box-head"><span id="mergeLabelA">내가 고른 이름</span><b id="mergeCountA">0개</b></div>
+      <div class="merge-list" id="mergeListA"></div>
+    </div>
+    <div class="merge-box">
+      <div class="merge-box-head"><span id="mergeLabelB">상대가 고른 이름</span><b id="mergeCountB">0개</b></div>
+      <div class="merge-list" id="mergeListB"></div>
+    </div>
+    <div class="merge-actions" id="mergeActions"></div>
+  </section>
+
+  <input type="file" id="mergeFileInput" accept=".txt,text/plain" multiple style="display:none" />
+  <input type="file" id="resumeFileInput" accept=".txt,text/plain" style="display:none" />
   <div class="white-flash" id="whiteFlash"></div>
   <div class="guide-overlay" id="guideOverlay">
     <div class="guide-text guide-tip-saved"><span class="g-arrow"></span>보관한<br>이름 보기</div>
@@ -1190,7 +1266,7 @@
 
 
   <input type="file" id="compareFileInput" accept=".txt,text/plain" style="display:none" />
-  <input type="file" id="loadStateInput" accept=".json,application/json" style="display:none" />
+  <input type="file" id="loadStateInput" accept=".txt,text/plain" style="display:none" />
   <div class="overlay" id="compareOverlay">
     <div class="saved-modal compare-modal">
       <div class="modal-head">
@@ -1322,8 +1398,8 @@
 
     drawerToggleBtn.addEventListener('click', () => drawer.classList.toggle('open'));
     savedOpenBtn.addEventListener('click', openSavedOverlay);
-    saveStateBtn.addEventListener('click', saveStateToFile);
-    loadStateBtn.addEventListener('click', openLoadStatePicker);
+    saveStateBtn.addEventListener('click', saveStateTxtFile);
+    loadStateBtn.addEventListener('click', () => { resumeFileInput.value = ''; resumeFileInput.click(); });
     guideCloseBtn.addEventListener('click', () => guideOverlay.classList.remove('show'));
     undoPeekBtn.addEventListener('click', () => { hideUndoPeek(); undoLastSelection(); });
     alwaysUndoBtn.addEventListener('click', () => { hideUndoPeek(); undoLastSelection(); });
@@ -1363,7 +1439,7 @@
     document.getElementById('includeSingleBtn').addEventListener('click', () => confirmSingleNameChoice(true));
     document.getElementById('excludeSingleBtn').addEventListener('click', () => confirmSingleNameChoice(false));
     document.getElementById('cancelSingleBtn').addEventListener('click', () => setupOverlay.classList.remove('show'));
-    document.getElementById('homeBtn').addEventListener('click', goHome);
+    document.getElementById('homeBtn').addEventListener('click', () => goHome(false));
     document.getElementById('lineageModeBtn').addEventListener('click', openLineagePage);
     document.getElementById('lineageBackBtn').addEventListener('click', closeLineagePage);
     document.getElementById('lineageStartBtn').addEventListener('click', startLineageMode);
@@ -1534,6 +1610,8 @@
       return shuffle(arr).slice(0, n);
     }
 
+    const NAME_SET = new Set(CANDIDATES.map(c => c.name));
+
     function ensureUnique(arr) {
       return Array.from(new Set(arr));
     }
@@ -1640,6 +1718,7 @@
 
     function openLineagePage() {
       if (!validateStartSettings()) return;
+      pushBackGuard();
       app.selectionMode = 'lineage';
       startPage.classList.add('hidden');
       lineagePage.classList.add('show');
@@ -1651,8 +1730,8 @@
       startPage.classList.remove('hidden');
     }
 
-    function goHome() {
-      if (app.started && !confirm('처음 화면으로 돌아갈까요? 지금까지의 선택은 사라집니다.')) return;
+    function goHome(skipConfirm) {
+      if (!skipConfirm && app.started && !confirm('처음 화면으로 돌아갈까요? 지금까지의 선택은 사라집니다.')) return;
       app.started = false;
       app.stage = 'setup';
       app.currentCard = null;
@@ -1714,10 +1793,15 @@
         });
         if (!app.filteredCandidates.length) { alert('조건에 맞는 이름이 없습니다. 돌림자나 위치를 바꿔주세요.'); lineagePage.classList.add('show'); return; }
       }
+      if (PRESET_NAMES) {
+        const presetSet = new Set(PRESET_NAMES);
+        app.filteredCandidates = CANDIDATES.filter(c => presetSet.has(c.name));
+      }
       app.candidateMap = Object.fromEntries(app.filteredCandidates.map(c => [c.name, c]));
       app.conditionBaseTotal = app.filteredCandidates.length;
 
       app.started = true;
+      pushBackGuard();
       app.stage = 'round1';
       app.round1Remaining = app.filteredCandidates.map(c => c.name);
       app.round1Saved = [];
@@ -2079,6 +2163,243 @@
       showToast('1라운드 보관 이름 TXT를 저장했습니다');
     }
 
+    /* ===================== v10 additions ===================== */
+    let PRESET_NAMES = null;
+
+    const mergePage = document.getElementById('mergePage');
+    const startMenuOverlay = document.getElementById('startMenuOverlay');
+    const mergeFileInput = document.getElementById('mergeFileInput');
+    const resumeFileInput = document.getElementById('resumeFileInput');
+
+    app.mergeA = [];
+    app.mergeB = [];
+    app.mergeMode = 'compare';
+
+    /* ---------- TXT 저장 / 불러오기 ---------- */
+    function buildStateTxt() {
+      const list = getCurrentSurvivors();
+      const head = [
+        '# 엄마내이름 저장 파일',
+        `# 성=${app.surname}`,
+        `# 성별=${app.genderChoice}`,
+        `# 저장시각=${new Date().toLocaleString('ko-KR')}`,
+        `# 이름수=${list.length}`
+      ];
+      return head.concat(list.map(n => fullName(n))).join('\n');
+    }
+
+    function parseStateTxt(text) {
+      const meta = {};
+      text.split(/\r?\n/).forEach(line => {
+        const t = line.trim();
+        if (!t.startsWith('#')) return;
+        const m = t.slice(1).split('=');
+        if (m.length >= 2) meta[m[0].trim()] = m.slice(1).join('=').trim();
+      });
+      if (meta['성별'] === 'boy' || meta['성별'] === 'girl') {
+        app.genderChoice = meta['성별'];
+        genderBtns.forEach(b => b.classList.toggle('active', b.dataset.gender === app.genderChoice));
+        updateHeroBaby(false);
+      }
+      if (meta['성']) { surnameInput.value = meta['성']; app.surname = meta['성']; }
+      return parseNameTxt(text);
+    }
+
+    function saveStateTxtFile() {
+      if (!app.started) { showToast('진행 중일 때 저장할 수 있어요'); return; }
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+      downloadTxt(`${app.surname}_엄마내이름_${stamp}.txt`, buildStateTxt());
+      showToast('현재 남은 이름을 TXT로 저장했어요');
+    }
+
+    /* ---------- 이름 목록으로 바로 시작 ---------- */
+    function beginWithNames(names) {
+      const unique = ensureUnique(names).filter(n => NAME_SET.has(n));
+      if (!unique.length) { alert('파일에서 인식할 수 있는 이름이 없어요.'); return false; }
+      if (!(surnameInput.value || '').trim()) { alert('성을 먼저 입력해주세요.'); return false; }
+      app.selectionMode = 'all';
+      app.includeSingle = true;
+      PRESET_NAMES = unique;
+      startApp();
+      PRESET_NAMES = null;
+      if (!app.started) return false;
+      guideOverlay.classList.remove('show');
+      app.round1Saved = app.filteredCandidates.map(c => c.name);
+      app.round1Remaining = [];
+      app.currentCard = null;
+      advanceAfterRound1();
+      pushBackGuard();
+      return true;
+    }
+
+    /* ---------- 시작 메뉴 ---------- */
+    function openStartMenu() { startMenuOverlay.classList.add('show'); }
+    function closeStartMenu() { startMenuOverlay.classList.remove('show'); }
+
+    /* ---------- 비교 / 합치기 페이지 ---------- */
+    function openMergePage(mode) {
+      app.mergeMode = mode;
+      if (mode === 'compare') {
+        app.mergeA = getComparisonBaseNames();
+        app.mergeB = [];
+        document.getElementById('mergeTitle').textContent = '남편/아내와 비교하기';
+        document.getElementById('mergeSub').textContent = '내 이름을 내보내 전달하고, 상대의 파일을 가져오면 겹치는 이름이 표시돼요.';
+        document.getElementById('mergeLabelA').textContent = '내가 고른 이름';
+        document.getElementById('mergeLabelB').textContent = '상대가 고른 이름';
+      } else {
+        app.mergeA = [];
+        app.mergeB = [];
+        document.getElementById('mergeTitle').textContent = '둘이 고른 이름 합치기';
+        document.getElementById('mergeSub').textContent = '두 사람의 이름 파일을 가져오면 겹치는 이름이 표시돼요.';
+        document.getElementById('mergeLabelA').textContent = '첫 번째 파일';
+        document.getElementById('mergeLabelB').textContent = '두 번째 파일';
+      }
+      closeStartMenu();
+      renderMergePage();
+      mergePage.classList.add('show');
+      pushBackGuard();
+    }
+    function closeMergePage() { mergePage.classList.remove('show'); }
+
+    function renderMergePage() {
+      const setA = new Set(app.mergeA);
+      const setB = new Set(app.mergeB);
+      const chip = (n, dup) => `<div class="name-chip${dup ? ' dup' : ''}">${fullName(n)}</div>`;
+      const fill = (el, list, other) => {
+        el.innerHTML = list.length
+          ? list.map(n => chip(n, other.has(n))).join('')
+          : '<div class="empty">아직 이름이 없어요.</div>';
+      };
+      fill(document.getElementById('mergeListA'), app.mergeA, setB);
+      fill(document.getElementById('mergeListB'), app.mergeB, setA);
+      document.getElementById('mergeCountA').textContent = `${app.mergeA.length}개`;
+      document.getElementById('mergeCountB').textContent = `${app.mergeB.length}개`;
+
+      const common = app.mergeA.filter(n => setB.has(n));
+      const union = ensureUnique(app.mergeA.concat(app.mergeB));
+      const actions = document.getElementById('mergeActions');
+      const both = app.mergeA.length && app.mergeB.length;
+
+      if (both) {
+        actions.innerHTML = `
+          <div class="dup-note">겹치는 이름 ${common.length}개 · 합치면 ${union.length}개</div>
+          <button class="bottom-btn primary" id="useCommonMergeBtn"${common.length ? '' : ' disabled'}>같이 고른 이름으로 다음 라운드 진행하기</button>
+          <button class="bottom-btn green" id="useUnionMergeBtn">우리가 고른 이름 전체로 다음 라운드 진행하기</button>`;
+        document.getElementById('useCommonMergeBtn').addEventListener('click', () => proceedMerge(common));
+        document.getElementById('useUnionMergeBtn').addEventListener('click', () => proceedMerge(union));
+      } else if (app.mergeMode === 'compare') {
+        actions.innerHTML = `
+          <button class="bottom-btn green" id="mergeExportBtn">내 이름들 내보내기</button>
+          <button class="bottom-btn primary" id="mergeImportBtn">가져오기</button>`;
+        document.getElementById('mergeExportBtn').addEventListener('click', exportMergeMine);
+        document.getElementById('mergeImportBtn').addEventListener('click', pickMergeFiles);
+      } else {
+        actions.innerHTML = '<button class="bottom-btn primary" id="mergeImportBtn">가져오기</button>';
+        document.getElementById('mergeImportBtn').addEventListener('click', pickMergeFiles);
+      }
+    }
+
+    function exportMergeMine() {
+      if (!app.mergeA.length) { showToast('내보낼 이름이 없어요'); return; }
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+      const head = [`# 성=${app.surname}`, `# 성별=${app.genderChoice}`];
+      downloadTxt(`${app.surname}_내가고른이름_${stamp}.txt`, head.concat(app.mergeA.map(n => fullName(n))).join('\n'));
+      showToast('내 이름 TXT를 저장했어요');
+    }
+
+    function pickMergeFiles() { mergeFileInput.value = ''; mergeFileInput.click(); }
+
+    function readFilesAsText(files) {
+      return Promise.all(Array.from(files).map(f => new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result || ''));
+        r.onerror = () => res('');
+        r.readAsText(f, 'utf-8');
+      })));
+    }
+
+    mergeFileInput.addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files || !files.length) return;
+      const texts = await readFilesAsText(files);
+      let applied = 0;
+      for (const text of texts) {
+        const names = (app.mergeMode === 'fresh' && !app.mergeA.length) ? parseStateTxt(text) : parseNameTxt(text);
+        if (!names.length) continue;
+        if (!app.mergeA.length) app.mergeA = names;
+        else if (!app.mergeB.length) app.mergeB = names;
+        else break;
+        applied++;
+      }
+      e.target.value = '';
+      if (!applied) { alert('파일에서 인식할 수 있는 이름이 없어요.'); return; }
+      renderMergePage();
+    });
+
+    function proceedMerge(list) {
+      if (!list.length) { showToast('진행할 이름이 없어요'); return; }
+      closeMergePage();
+      if (app.mergeMode === 'fresh') { beginWithNames(list); return; }
+      if (app.stage === 'round2Intro') {
+        app.round1Saved = ensureUnique(list);
+        app.round2Winners = [];
+        advanceAfterRound1();
+        return;
+      }
+      if (app.stage === 'round3Intro') {
+        app.round2Winners = ensureUnique(list);
+        advanceAfterRound2();
+        return;
+      }
+      continueCurrentIntro();
+    }
+
+    /* ---------- 뒤로가기 가드 ---------- */
+    function pushBackGuard() {
+      try { history.pushState({ mnGuard: Date.now() }, ''); } catch (_) {}
+    }
+    window.addEventListener('popstate', () => {
+      if (startMenuOverlay.classList.contains('show')) { closeStartMenu(); pushBackGuard(); return; }
+      if (mergePage.classList.contains('show')) {
+        closeMergePage();
+        if (app.mergeMode === 'fresh' && !app.started) startPage.classList.remove('hidden');
+        pushBackGuard();
+        return;
+      }
+      if (lineagePage.classList.contains('show')) { closeLineagePage(); pushBackGuard(); return; }
+      if (setupOverlay.classList.contains('show')) { setupOverlay.classList.remove('show'); pushBackGuard(); return; }
+      if (app.started) {
+        if (confirm('정말 취소하시겠습니까? 저장하지 않은 데이터는 다 날아갑니다.')) goHome(true);
+        else pushBackGuard();
+        return;
+      }
+      pushBackGuard();
+    });
+    pushBackGuard();
+
+    document.getElementById('startMenuBtn').addEventListener('click', openStartMenu);
+    document.getElementById('closeStartMenuBtn').addEventListener('click', closeStartMenu);
+    startMenuOverlay.addEventListener('click', (e) => { if (e.target === startMenuOverlay) closeStartMenu(); });
+    document.getElementById('resumeOneBtn').addEventListener('click', () => { resumeFileInput.value = ''; resumeFileInput.click(); });
+    document.getElementById('mergeTwoBtn').addEventListener('click', () => openMergePage('fresh'));
+    document.getElementById('mergeBackBtn').addEventListener('click', () => {
+      closeMergePage();
+      if (app.mergeMode === 'fresh' && !app.started) startPage.classList.remove('hidden');
+    });
+    resumeFileInput.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        const names = parseStateTxt(String(r.result || ''));
+        e.target.value = '';
+        if (!names.length) { alert('파일에서 인식할 수 있는 이름이 없어요.'); return; }
+        closeStartMenu();
+        if (beginWithNames(names)) showToast(`${names.length}개 이름으로 이어서 시작해요`);
+      };
+      r.readAsText(f, 'utf-8');
+    });
+
     function parseNameTxt(text) {
       const lines = text.split(/[\n,;\t]+/g);
       const names = [];
@@ -2088,7 +2409,7 @@
         if (app.surname && cleaned.startsWith(app.surname) && cleaned.length > app.surname.length) {
           cleaned = cleaned.slice(app.surname.length);
         }
-        if (app.candidateMap[cleaned]) names.push(cleaned);
+        if (NAME_SET.has(cleaned)) names.push(cleaned);
       }
       return ensureUnique(names);
     }
@@ -2412,8 +2733,7 @@
             <button class="bottom-btn primary intro-primary-btn" id="introStartBtn">계속</button>
             ${canCompare ? `
               <div class="intro-secondary-actions">
-                <button class="bottom-btn green" id="exportRound1Btn">내 이름들 내보내기</button>
-                <button class="bottom-btn gray" id="compareRound1Btn">파일로 비교하기</button>
+                <button class="bottom-btn green" id="compareRound1Btn">남편/아내와 비교하기</button>
               </div>
             ` : ''}
           </div>
@@ -2421,8 +2741,7 @@
       `;
       document.getElementById('introStartBtn').addEventListener('click', onStart);
       if (canCompare) {
-        document.getElementById('exportRound1Btn').addEventListener('click', exportRound1SavedTxt);
-        document.getElementById('compareRound1Btn').addEventListener('click', openCompareFilePicker);
+        document.getElementById('compareRound1Btn').addEventListener('click', () => openMergePage('compare'));
       }
       bottomBar.innerHTML = '';
     }
