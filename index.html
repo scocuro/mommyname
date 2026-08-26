@@ -4,33 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>엄마 내 이름</title>
-  <meta name="description" content="수많은 후보 중 우리 아기에게 어울리는 이름을 골라보세요." />
-  <meta name="application-name" content="엄마 내 이름" />
-  <meta name="apple-mobile-web-app-title" content="엄마 내 이름" />
-  <meta name="theme-color" content="#f5f7fb" />
-
-  <!-- 브라우저 탭·즐겨찾기·휴대폰 홈 화면 아이콘 -->
-  <link rel="icon" type="image/png" sizes="852x852" href="./thumbnail_re.png" />
-  <link rel="apple-touch-icon" sizes="852x852" href="./thumbnail_re.png" />
-  <link rel="manifest" href="./manifest.webmanifest" />
-
-  <!-- 카카오톡·문자·SNS 링크 공유 썸네일 -->
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="ko_KR" />
-  <meta property="og:site_name" content="엄마 내 이름" />
-  <meta property="og:title" content="엄마 내 이름" />
-  <meta property="og:description" content="수많은 후보 중 우리 아기에게 어울리는 이름을 골라보세요." />
-  <meta property="og:image" content="https://nookt.co.kr/mommyname/thumbnail_re.png" />
-  <meta property="og:image:secure_url" content="https://nookt.co.kr/mommyname/thumbnail_re.png" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="아기 가슴의 빨간 네임택을 가리키는 일러스트" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="엄마 내 이름" />
-  <meta name="twitter:description" content="수많은 후보 중 우리 아기에게 어울리는 이름을 골라보세요." />
-  <meta name="twitter:image" content="https://nookt.co.kr/mommyname/thumbnail_re.png" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gaegu:wght@700&display=swap" />
@@ -1392,6 +1365,7 @@
       toastTimer: null,
 
       round1Remaining: [],
+      round1Replay: [],
       round1Saved: [],
       round1TrendShown: {1:0,2:0,3:0,4:0,5:0},
       currentCard: null,
@@ -1640,6 +1614,9 @@
     function undoLastSelection() {
       if (!app.undoStack.length) { showToast("되돌릴 선택이 없습니다"); return; }
       const last = app.undoStack.pop();
+      if (app.currentCard && !app.round1Replay.includes(app.currentCard.name)) {
+        app.round1Replay.unshift(app.currentCard.name);
+      }
       if (last.type === "keep") {
         app.round1Saved = app.round1Saved.filter(n => n !== last.item.name);
         if (!app.round1Remaining.includes(last.item.name)) app.round1Remaining.unshift(last.item.name);
@@ -1653,6 +1630,10 @@
         app.round1Saved = app.round1Saved.filter(n => !last.savedNames.includes(n));
         for (const n of last.restoreNames) {
           if (!app.round1Remaining.includes(n)) app.round1Remaining.unshift(n);
+        }
+        for (let i = last.restoreNames.length - 1; i >= 0; i--) {
+          const n = last.restoreNames[i];
+          if (n !== last.primary.name && !app.round1Replay.includes(n)) app.round1Replay.unshift(n);
         }
         app.round1TrendShown[last.primary.trend] = Math.max(0, (app.round1TrendShown[last.primary.trend] || 0) - 1);
         app.currentCard = last.primary;
@@ -1824,6 +1805,7 @@
       app.stage = 'setup';
       app.currentCard = null;
       app.round1Remaining = [];
+      app.round1Replay = [];
       app.round1Saved = [];
       app.undoStack = [];
       app.finalFour = [];
@@ -1892,6 +1874,7 @@
       pushBackGuard();
       app.stage = 'round1';
       app.round1Remaining = app.filteredCandidates.map(c => c.name);
+      app.round1Replay = [];
       app.round1Saved = [];
       app.round1TrendShown = {1:0,2:0,3:0,4:0,5:0};
       app.currentCard = null;
@@ -2075,6 +2058,7 @@
           stage: app.stage,
           conditionBaseTotal: app.conditionBaseTotal || app.filteredCandidates.length || 0,
           round1Remaining: app.round1Remaining.slice(),
+          round1Replay: (app.round1Replay || []).slice(),
           round1Saved: app.round1Saved.slice(),
           round1TrendShown: {...app.round1TrendShown},
           currentCardName: app.currentCard ? app.currentCard.name : null,
@@ -2185,6 +2169,7 @@
 
       const validNames = list => ensureUnique(arr(list).filter(name => app.candidateMap[name]));
       app.round1Remaining = validNames(state.round1Remaining);
+      app.round1Replay = validNames(state.round1Replay);
       app.round1Saved = validNames(state.round1Saved);
       app.round1TrendShown = {...{1:0,2:0,3:0,4:0,5:0}, ...(state.round1TrendShown || {})};
       app.currentCard = state.currentCardName && app.candidateMap[state.currentCardName] ? app.candidateMap[state.currentCardName] : null;
@@ -2925,6 +2910,14 @@
 
     function pickNextRound1Card() {
       if (!app.round1Remaining.length) return null;
+
+      if (app.round1Replay && app.round1Replay.length) {
+        const remainingSet = new Set(app.round1Remaining);
+        while (app.round1Replay.length) {
+          const name = app.round1Replay.shift();
+          if (remainingSet.has(name) && app.candidateMap[name]) return app.candidateMap[name];
+        }
+      }
 
       const buckets = new Map();
       for (const name of app.round1Remaining) {
