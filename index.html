@@ -416,7 +416,7 @@
     }
     .toast {
       position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(10px);
-      z-index: 60; background: rgba(17,24,39,.94); color: #fff; font-size: 13px; font-weight: 900;
+      z-index: 87; background: rgba(17,24,39,.94); color: #fff; font-size: 13px; font-weight: 900;
       padding: 12px 14px; border-radius: 999px; opacity: 0; pointer-events: none;
       transition: opacity .2s ease, transform .2s ease; max-width: calc(100vw - 32px); text-align: center; line-height: 1.4;
     }
@@ -3037,13 +3037,13 @@
       boy: [
         [100, MS_M100, '얘야 바로 그거다. 대박 나는 이름 아니 아니 그거 말고!'],
         [300, MS_M300, '15회 연속 바른생활상 수상한 어린이는 바로…'],
-        [500, MS_M500, '니 이름 딱인데? 내 여자 이름으로.'],
+        [500, MS_M500, '니 이름… 자꾸 생각나. 너도…'],
         [700, MS_M700, '다른 건 볼 것도 없군. 이름에서 에이스 냄새가 나'],
         [1000, MS_M1000, '올해 대한민국을 가장 빛낸 이름. 바로…']
       ],
       girl: [
         [100, MS_M100, '얘야 바로 그거다. 대박 나는 이름 아니 아니 그거 말고!'],
-        [300, MS_F300, '니 이름… 자꾸 생각나. 너도…'],
+        [300, MS_F300, '니 이름 딱인데? 내 여자 이름으로.'],
         [500, MS_F500, '다른 건 볼 것도 없군. 이름에서 에이스 냄새가 나'],
         [700, MS_F700, '올해 대한민국을 가장 빛낸 이름. 바로…']
       ]
@@ -3263,8 +3263,14 @@
     /* navigator.share 는 반드시 클릭과 같은 턴에서 호출해야 해서 동기 함수로 둔다 */
     function plainType(t) { return String(t || '').split(';')[0] || 'application/octet-stream'; }
 
+    function asciiShareName(filename) {
+      const dot = String(filename || '').lastIndexOf('.');
+      return 'mommyname' + (dot > 0 ? filename.slice(dot) : '');
+    }
+
+    /* 일부 안드로이드 공유 대상이 한글 파일명을 거부해서 ASCII 로 넘긴다 */
     function makeShareFile(blob, filename) {
-      try { return new File([blob], filename, { type: plainType(blob.type) }); }
+      try { return new File([blob], asciiShareName(filename), { type: plainType(blob.type) }); }
       catch (_) { return null; }
     }
 
@@ -3273,10 +3279,15 @@
     function shareNow(file, onFail) {
       if (!file) { onFail('file'); return; }
       if (!navigator.share) { onFail('unsupported'); return; }
+      const data = { files: [file] };
+      if (navigator.canShare && !navigator.canShare(data)) { onFail('type'); return; }
       let p;
-      try { p = navigator.share({ files: [file] }); }
-      catch (err) { onFail((err && err.name) || 'error'); return; }
-      if (p && p.catch) p.catch(err => { if (!err || err.name !== 'AbortError') onFail((err && err.name) || 'error'); });
+      try { p = navigator.share(data); }
+      catch (err) { onFail('call:' + ((err && err.name) || '?')); return; }
+      if (p && p.catch) p.catch(err => {
+        if (err && err.name === 'AbortError') return;
+        onFail('reject:' + ((err && err.name) || '?'));
+      });
     }
 
     function shareFileNow(blob, filename, title, onFail) {
@@ -3337,7 +3348,7 @@
           reveal.videoName = name;
           reveal.videoFile = makeShareFile(blob, name);
           const shareBtn = document.getElementById('revealShareBtn');
-          shareBtn.style.display = (navigator.share && reveal.videoFile) ? '' : 'none';
+          shareBtn.style.display = (reveal.videoFile && canShareFiles([reveal.videoFile])) ? '' : 'none';
           document.getElementById('revealShareSub').textContent =
             `영상이 준비됐어요 · ${Math.round(reveal.duration / 1000)}초`;
           document.getElementById('revealVideoBtn').innerHTML = '영상 파일로 저장';
@@ -3393,8 +3404,8 @@
       const file = reveal.videoFile || makeShareFile(reveal.videoBlob, reveal.videoName);
       if (!file) { showToast('영상을 먼저 만들어주세요'); return; }
       shareNow(file, reason => {
-        showToast(shareReasonText(reason) + ` (${reason})`);
-        setTimeout(() => downloadBlob(reveal.videoBlob, reveal.videoName), 900);
+        alert('공유창을 열지 못했어요.\n' + shareReasonText(reason) + '\n(사유: ' + reason + ')\n\n대신 파일로 저장할게요.');
+        downloadBlob(reveal.videoBlob, reveal.videoName);
       });
     });
 
