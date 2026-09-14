@@ -3025,8 +3025,14 @@
           ? ensureUnique(decoded.names.map(n => n.replace(/\s+/g, '')).map(n => (app.surname && n.startsWith(app.surname) ? n.slice(app.surname.length) : n)).filter(n => NAME_SET.has(n)))
           : parseNameTxt(raw);
         if (!other.length) { alert('이 파일에서는 이름을 찾지 못했어요.'); return; }
+        const mine = app.finalFour.slice();
+        const otherSet = new Set(other);
+        const commonCount = mine.filter(n => otherSet.has(n)).length;
+        if (!commonCount) {
+          alert('아쉽게도 함께 고른 이름이 하나도 없어요.\n두 사람이 고른 이름 ' + ensureUnique(mine.concat(other)).length + '개를 모두 보여드릴게요.');
+        }
         closeShareOverlay();
-        startReveal(app.finalFour.slice(), other);
+        startReveal(mine, other);
       };
       r.readAsText(f, 'utf-8');
     });
@@ -3166,8 +3172,13 @@
         let cx = x;
         runs.forEach(([txt, col]) => { g.fillStyle = col; g.fillText(txt, cx, y); cx += g.measureText(txt).width; });
       };
-      drawRuns([['엄마', GREEN], ['와 ', WHITE], ['아빠', GREEN], ['가 함께 선택한', WHITE]], 41, 71);
-      drawRuns([['내 이름은 ', WHITE], [`${reveal.total}개`, GREEN], ['에요', WHITE]], 41, 116);
+      if (reveal.onlyCommon) {
+        drawRuns([['엄마', GREEN], ['와 ', WHITE], ['아빠', GREEN], ['가 함께 선택한', WHITE]], 41, 71);
+        drawRuns([['내 이름은 ', WHITE], [`${reveal.total}개`, GREEN], ['에요', WHITE]], 41, 116);
+      } else {
+        drawRuns([['엄마', GREEN], ['와 ', WHITE], ['아빠', GREEN], ['가 고른', WHITE]], 41, 71);
+        drawRuns([['이름 후보는 ', WHITE], [`${reveal.total}개`, GREEN], ['에요', WHITE]], 41, 116);
+      }
 
       /* 좌하단 링크 (배경 없이 흰 글씨) */
       g.textAlign = 'left'; g.textBaseline = 'alphabetic';
@@ -3181,10 +3192,11 @@
       g.save();
       g.beginPath(); g.rect(40, 170, W - 80, 300); g.clip();
       g.textAlign = 'center'; g.textBaseline = 'middle';
+      const sc = Math.min(1, per / 1900);
+      const IN = 460 * sc, HOLD = 900 * sc, OUT = 460 * sc;
       reveal.names.forEach((name, i) => {
         const sT = t - intro - i * per;
-        if (sT < 0 || sT > per + 400) return;
-        const IN = 460, HOLD = 900, OUT = 460;
+        if (sT < 0 || sT > IN + HOLD + OUT) return;
         let x, alpha = 1, scale = 1;
         if (sT < IN) {
           const k = easeOutCubic(sT / IN);
